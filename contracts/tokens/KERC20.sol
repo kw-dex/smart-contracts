@@ -20,6 +20,7 @@ contract KERC20 is KERC20Token, Ownable {
         uint16 _tokenDecimals,
         address _tokenOwner
     ) {
+        require(_tokenDecimals > 0 && _tokenDecimals <= 18, "Invalid token decimals");
         _symbol = _tokenSymbol;
         _name = _tokenName;
         _decimals = _tokenDecimals;
