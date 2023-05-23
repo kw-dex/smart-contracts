@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "contracts/ERC20/IERC20.sol";
+import "contracts/tokens/IERC20.sol";
+import "contracts/utils/Ownable.sol";
 
-contract KERC20 is KERC20Token {
+contract KERC20 is KERC20Token, Ownable {
     string _symbol;
     string _name;
     uint16 _decimals;
 
     uint256 _totalSupply;
-    address _owner;
 
     mapping (address => uint256) balances;
     mapping (address => mapping(address => uint256)) allowed;
@@ -17,19 +17,20 @@ contract KERC20 is KERC20Token {
     constructor(
         string memory _tokenSymbol,
         string memory _tokenName,
-        uint16 _tokenDecimals
+        uint16 _tokenDecimals,
+        address _tokenOwner
     ) {
         _symbol = _tokenSymbol;
         _name = _tokenName;
         _decimals = _tokenDecimals;
-        _owner = msg.sender;
+        _owner = _tokenOwner;
     }
 
     function totalSupply() external view returns(uint256) {
         return _totalSupply - balances[address(0)];
     }
 
-    function balanceOf(address tokenOwner) external view returns (uint256 balance) {
+    function balanceOf(address tokenOwner) external view returns (uint256) {
         return balances[tokenOwner];
     }
 
@@ -85,16 +86,15 @@ contract KERC20 is KERC20Token {
         return true;
     }
 
-    function owner() external view returns (address) {
-        return _owner;
+    function symbol() external view returns (string memory) {
+        return _symbol;
     }
 
-    function transferOwnership(address to) external returns (bool success) {
-        require(msg.sender == _owner, "Not an owner");
+    function name() external view returns (string memory) {
+        return _name;
+    }
 
-        _owner = to;
-
-        emit TransferOwnership(msg.sender, to);
-        return true;
+    function decimals() external view returns (uint256) {
+        return _decimals;
     }
 }

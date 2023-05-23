@@ -24,13 +24,13 @@ interface KERC20Token is ERC20Token {
 
     function burn(uint256 amount) external returns (bool success);
 
-    function owner() external view returns (address);
+    function symbol() external view returns (string memory);
 
-    function transferOwnership(address to) external returns (bool success);
+    function name() external view returns (string memory);
+
+    function decimals() external view returns (uint256);
 
     event Mint(uint256 amount);
 
     event Burn(address indexed tokenOwner, uint256 amount);
-
-    event TransferOwnership(address indexed from, address indexed to);
 }
