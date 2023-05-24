@@ -21,12 +21,12 @@ contract KPoolFactory is Ownable {
         _owner = msg.sender;
     }
 
-    function deployPool(address _token0Address, address _token1Address) external returns (address) {
+    function deployPool(address _token0Address, address _token1Address, uint8 _feePercent) external returns (address) {
         DeployedPoolData memory existingPool = this.resolvePoolAddress(_token0Address, _token1Address);
 
         if (existingPool.deployed) return existingPool.poolAddress;
 
-        KPool pool = new KPool(_token0Address, _token1Address, msg.sender);
+        KPool pool = new KPool(_token0Address, _token1Address, msg.sender, _feePercent);
         _deployedPools[keccak256(abi.encodePacked(_token0Address, _token1Address))] = DeployedPoolData(
             _token0Address,
             _token1Address,

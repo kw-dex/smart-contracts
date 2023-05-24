@@ -4,7 +4,7 @@ pragma solidity ^0.8.18;
 import "contracts/utils/Ownable.sol";
 import "contracts/tokens/KERC20.sol";
 
-contract TokenFactory is Ownable {
+contract KTokenFactory is Ownable {
     address[] _deployedTokens;
 
     event TokenDeployed(address indexed tokenOwner, address indexed tokenAddress);
