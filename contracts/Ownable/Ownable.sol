@@ -17,11 +17,10 @@ contract Ownable is IOwnable {
         _owner = msg.sender;
     }
 
-    function transferOwnership(address to) external onlyOwner returns (bool) {
+    function transferOwnership(address to) external onlyOwner {
         _owner = to;
 
         emit TransferOwnership(msg.sender, to);
-        return true;
     }
 
     function owner() external view returns (address) {
