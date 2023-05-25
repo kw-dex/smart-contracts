@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import "contracts/utils/Ownable.sol";
-import "contracts/tokens/KERC20.sol";
-import "contracts/KPool.sol";
+import "contracts/Ownable/Ownable.sol";
+import "contracts/KPool/IKPool.sol";
+import "contracts/KPool/KPool.sol";
 
 contract KPoolFactory is Ownable {
     struct DeployedPoolData {
@@ -14,6 +14,8 @@ contract KPoolFactory is Ownable {
     }
 
     mapping (bytes32 => DeployedPoolData) _deployedPools;
+
+    address[] verifiedPools;
 
     event PoolDeployed(address indexed poolAddress, address indexed owner);
 
@@ -26,7 +28,10 @@ contract KPoolFactory is Ownable {
 
         if (existingPool.deployed) return existingPool.poolAddress;
 
-        KPool pool = new KPool(_token0Address, _token1Address, msg.sender, _feePercent);
+        IKPool pool = new KPool(_token0Address, _token1Address, msg.sender, _feePercent);
+
+        if (msg.sender == _owner) verifiedPools.push(address(pool));
+
         _deployedPools[keccak256(abi.encodePacked(_token0Address, _token1Address))] = DeployedPoolData(
             _token0Address,
             _token1Address,
@@ -47,5 +52,11 @@ contract KPoolFactory is Ownable {
         if (_deployedPools[reversePoolKey].deployed) return _deployedPools[reversePoolKey];
 
         return DeployedPoolData(_token0, _token1, address(0), false);
+    }
+
+    function verifyPool(address poolAddress) external {
+        require(msg.sender == _owner, "Not an owner");
+
+        verifiedPools.push(poolAddress);
     }
 }

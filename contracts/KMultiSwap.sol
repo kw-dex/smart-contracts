@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import "contracts/KPool.sol";
-import "contracts/tokens/KERC20.sol";
+import "contracts/KPool/KPool.sol";
+import "contracts/KRC20/IKRC20.sol";
 
 contract KMultiSwap {
     constructor() {}
@@ -20,20 +20,12 @@ contract KMultiSwap {
         address indexed account
     );
 
-    event MultiSwapPartial(
-        address indexed from,
-        address indexed to,
-        address latestTo,
-        uint256 spend,
-        uint256 received,
-        address indexed account
-    );
-
-    event MultiSwapError(
-        address indexed from,
-        address indexed to,
-        uint256 spend,
-        address indexed account
+    error MultiSwapError(
+        address from,
+        address to,
+        address pool,
+        uint256 spendAmount,
+        bytes reason
     );
 
     function estimateSwapFees(RouteStep[] memory steps) external view returns (uint256) {
@@ -42,55 +34,69 @@ contract KMultiSwap {
         for (uint256 i = 0; i < steps.length; i++) {
             RouteStep memory stepData = steps[i];
 
-            KPool pool = KPool(stepData.pool);
+            IKPool pool = IKPool(stepData.pool);
             totalFee += pool.fee();
         }
 
         return totalFee;
     }
 
-    function multiSwap(uint256 amount, RouteStep[] memory steps, address receiveTokenAddress) external {
-        KERC20 initialSpendToken = KERC20(steps[0].spendToken);
+    function estimateReceiveAmount(uint256 amount, RouteStep[] memory steps) external view returns (uint256) {
+        uint256 receiveAmount;
 
-        initialSpendToken.transferFrom(msg.sender, address(this), amount);
+        uint256 prevReceiveAmount = amount;
 
         for (uint256 i = 0; i < steps.length; i++) {
             RouteStep memory stepData = steps[i];
 
             KPool pool = KPool(stepData.pool);
-            KERC20 spendToken = KERC20(stepData.spendToken);
+
+            prevReceiveAmount = pool.estimateExchangeAmount(stepData.spendToken, prevReceiveAmount);
+
+            receiveAmount += prevReceiveAmount;
+        }
+
+        return receiveAmount;
+    }
+
+    function getReceiveToken(RouteStep[] memory steps) private view returns (address) {
+        RouteStep memory lastStep = steps[steps.length - 1];
+
+        IKPool lastPool = IKPool(lastStep.pool);
+
+        if (lastPool.token0() == lastStep.spendToken) return lastPool.token1();
+        else return lastPool.token0();
+    }
+
+    function multiSwap(uint256 amount, RouteStep[] memory steps) external {
+        IKRC20 initialSpendToken = IKRC20(steps[0].spendToken);
+
+        initialSpendToken.transferFrom(msg.sender, address(this), amount);
+
+        address receiveTokenAddress = getReceiveToken(steps);
+
+        for (uint256 i = 0; i < steps.length; i++) {
+            RouteStep memory stepData = steps[i];
+
+            IKPool pool = IKPool(stepData.pool);
+            IKRC20 spendToken = IKRC20(stepData.spendToken);
 
             spendToken.approve(stepData.pool, spendToken.balanceOf(address(this)));
 
             try pool.exchangeToken(stepData.spendToken, spendToken.balanceOf(address(this))) {
                 continue;
-            } catch {
-                if (i == 0) {
-                    emit MultiSwapError(steps[0].spendToken, receiveTokenAddress, amount, msg.sender);
-
-                    return;
-                }
-
-                address latestTokenAddress = pool.isLTR(stepData.spendToken) ? pool.token1() : pool.token0();
-
-                KERC20 latestReceivedToken = KERC20(latestTokenAddress);
-
-                uint256 latestAmount = latestReceivedToken.balanceOf(address(this));
-        
-                emit MultiSwapPartial(
+            } catch (bytes memory reason) {
+                revert MultiSwapError(
                     steps[0].spendToken,
                     receiveTokenAddress,
-                    latestTokenAddress,
-                    amount, 
-                    latestAmount,
-                    msg.sender
+                    stepData.pool,
+                    amount,
+                    reason
                 );
-
-                return;
             }
         }
 
-        KERC20 receivedToken = KERC20(receiveTokenAddress);
+        IKRC20 receivedToken = IKRC20(receiveTokenAddress);
 
         uint256 receivedAmount = receivedToken.balanceOf(address(this));
 

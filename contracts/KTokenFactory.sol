@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import "contracts/utils/Ownable.sol";
-import "contracts/tokens/KERC20.sol";
+import "contracts/Ownable/Ownable.sol";
+import "contracts/KRC20/IKRC20.sol";
+import "contracts/KRC20/KRC20.sol";
 
 contract KTokenFactory is Ownable {
     address[] _deployedTokens;
@@ -18,7 +19,7 @@ contract KTokenFactory is Ownable {
         string memory name,
         uint16 decimals
     ) external returns (address) {
-        KERC20 token = new KERC20(symbol, name, decimals, msg.sender);
+        IKRC20 token = new KRC20(symbol, name, decimals, msg.sender);
 
         emit TokenDeployed(msg.sender, address(token));
 

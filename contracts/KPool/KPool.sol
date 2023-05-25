@@ -1,12 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import "contracts/utils/Ownable.sol";
-import "contracts/tokens/KERC20.sol";
+import "contracts/Ownable/Ownable.sol";
+import "contracts/KRC20/IKRC20.sol";
+import "contracts/KPool/IKPool.sol";
 
-contract KPool is Ownable {
-    KERC20 _token0;
-    KERC20 _token1;
+contract KPool is IKPool, Ownable {
+    IKRC20 _token0;
+    IKRC20 _token1;
+
+    struct Participant {
+        address account;
+        bool isParticipant;
+    }
 
     mapping (address => mapping(address => uint256)) deposits;
 
@@ -16,22 +22,11 @@ contract KPool is Ownable {
 
     mapping (address => uint256) _totalRewards;
 
-    struct Participant {
-        address account;
-        bool isParticipant;
-    }
-
     mapping (address => Participant) participants;
+
     address[] _participantAddresses;
+
     uint256 feePercent;
-
-    event Deposit(address indexed from, address indexed token, uint256 amount);
-
-    event Withdraw(address indexed to, address indexed token, uint256 amount);
-
-    event Exchange(address indexed fromToken, address indexed toToken, uint256 amountSpend, uint256 amountReceived);
-
-    event RewardsWithdrawn(address indexed to, uint256 token0, uint256 token1);
 
     uint256 _sharesDenominator = 1e10;
 
@@ -43,16 +38,18 @@ contract KPool is Ownable {
         address _poolOwner,
         uint256 _feePercent
     ) {
-        _token0 = KERC20(_poolToken0Address);
-        _token1 = KERC20(_poolToken1Address);
+        _token0 = IKRC20(_poolToken0Address);
+        _token1 = IKRC20(_poolToken1Address);
         _owner = _poolOwner;
         feePercent = _feePercent;
     }
 
+    // Deposit
+
     function depositToken(address tokenAddress, uint256 amount) external {
         require(amount > 0, "Invalid amounts");
 
-        KERC20 token = KERC20(tokenAddress);
+        IKRC20 token = IKRC20(tokenAddress);
 
         token.transferFrom(msg.sender, address(this), amount);
 
@@ -64,8 +61,10 @@ contract KPool is Ownable {
         emit Deposit(msg.sender, tokenAddress, amount);
     }
 
-    function withdrawToken(address tokenAddress, uint8 withdrawPercent) public {
-        KERC20 token = KERC20(tokenAddress);
+    // Withdraw
+
+    function withdrawToken(address tokenAddress, uint8 withdrawPercent) external {
+        IKRC20 token = IKRC20(tokenAddress);
 
         bool ltr = isLTR(tokenAddress);
         uint256 amount = estimateWithdrawAmount(withdrawPercent)[ltr ? 0 : 1];
@@ -100,7 +99,9 @@ contract KPool is Ownable {
         return [amount0, amount1];
     }
 
-    function exchangeToken(address tokenAddress, uint256 amount) public {
+    // Exchange
+
+    function exchangeToken(address tokenAddress, uint256 amount) external {
         uint256 feeAmount = (amount * feePercent) / 1e5;
 
         uint256 tokenAmount = estimateExchangeAmount(tokenAddress, amount);
@@ -137,27 +138,6 @@ contract KPool is Ownable {
         }
     }
 
-    function withdrawRewards () external {
-        uint256[2] memory rewardsAmount = estimateRewardsAmount(msg.sender);
-
-        _token0.transfer(msg.sender, rewardsAmount[0]);
-        _token1.transfer(msg.sender, rewardsAmount[1]);
-
-        rewards[msg.sender][address(_token0)] -= rewardsAmount[0];
-        rewards[msg.sender][address(_token1)] -= rewardsAmount[1];
-
-        _totalRewards[address(_token0)] -= rewardsAmount[0];
-        _totalRewards[address(_token1)] -= rewardsAmount[1];
-
-        emit RewardsWithdrawn(msg.sender, rewardsAmount[0], rewardsAmount[1]);
-    }
-
-    function isLTR(address _token0Address) public view returns (bool) {
-        if (_token0Address == address(_token0)) return true;
-
-        return false;
-    }
-
     function estimateExchangeAmount(address tokenAddress, uint256 amount) public view returns (uint) {
         uint256 feeAmount = (amount * feePercent) / _feeDonominator;
 
@@ -179,28 +159,77 @@ contract KPool is Ownable {
         return (ltr ? token1Exchange : token0Exchange) / 1e6;
     }
 
+    // Rewards
+
+    function withdrawRewards () external {
+        uint256[2] memory rewardsAmount = estimateRewardsAmount(msg.sender);
+
+        _token0.transfer(msg.sender, rewardsAmount[0]);
+        _token1.transfer(msg.sender, rewardsAmount[1]);
+
+        rewards[msg.sender][address(_token0)] -= rewardsAmount[0];
+        rewards[msg.sender][address(_token1)] -= rewardsAmount[1];
+
+        _totalRewards[address(_token0)] -= rewardsAmount[0];
+        _totalRewards[address(_token1)] -= rewardsAmount[1];
+
+        emit RewardsWithdrawn(msg.sender, rewardsAmount[0], rewardsAmount[1]);
+    }
+
+    function estimateRewardsAmount(address account) private view returns (uint256[2] memory) {
+        return [rewards[account][address(_token0)], rewards[account][address(_token1)]];
+    }
+
+    // Private calculations
+
     function calculatePriceImpact(uint256 tokenBalanceBefore, uint256 tokenBalanceAfter) private pure returns (uint256) {
         uint256 priceImpact = ((tokenBalanceBefore - tokenBalanceAfter) * 1e6) / tokenBalanceBefore;
         return priceImpact;
     }
 
-    function estimateAccountShare(address accountAddress) public view returns (uint256[2] memory) {
-        uint256 accountShare0 =  _totalDeposits[address(_token0)] == 0 ? 0 : (deposits[accountAddress][address(_token0)] * _sharesDenominator / _totalDeposits[address(_token0)]);
-        uint256 accountShare1 = _totalDeposits[address(_token1)] == 0 ? 0 : (deposits[accountAddress][address(_token1)] * _sharesDenominator / _totalDeposits[address(_token1)]);
+    function estimateAccountShare(address account) private view returns (uint256[2] memory) {
+        uint256 accountShare0 =  _totalDeposits[address(_token0)] == 0 ? 0 : (deposits[account][address(_token0)] * _sharesDenominator / _totalDeposits[address(_token0)]);
+        uint256 accountShare1 = _totalDeposits[address(_token1)] == 0 ? 0 : (deposits[account][address(_token1)] * _sharesDenominator / _totalDeposits[address(_token1)]);
 
-        if (deposits[accountAddress][address(_token0)] > _totalDeposits[address(_token0)]) accountShare0 = _sharesDenominator;
-        if (deposits[accountAddress][address(_token1)] > _totalDeposits[address(_token1)]) accountShare1 = _sharesDenominator;
+        if (deposits[account][address(_token0)] > _totalDeposits[address(_token0)]) accountShare0 = _sharesDenominator;
+        if (deposits[account][address(_token1)] > _totalDeposits[address(_token1)]) accountShare1 = _sharesDenominator;
 
         return [accountShare0, accountShare1];
     }
 
-    function estimateRewardsAmount(address participantAddress) public view returns (uint256[2] memory) {
-        return [rewards[participantAddress][address(_token0)], rewards[participantAddress][address(_token1)]];
+    // Pool data view
+
+    function token0() external view returns (address) {
+        return address(_token0);
     }
 
-    function getDepositAmounts(address depositOwner) external view returns (uint256[2] memory) {
-        return [deposits[depositOwner][address(_token0)], deposits[depositOwner][address(_token1)]];
+    function token1() external view returns (address) {
+        return address(_token1);
     }
+
+    function fee() external view returns (uint256) {
+        return feePercent;
+    }
+
+    function isLTR(address _token0Address) public view returns (bool) {
+        if (_token0Address == address(_token0)) return true;
+
+        return false;
+    }
+
+    function getAccountData() external view returns (AccountData memory) {
+        uint256[2] memory accountShares = estimateAccountShare(msg.sender);
+        uint256[2] memory accountDeposits = [
+            deposits[msg.sender][address(_token0)],
+            deposits[msg.sender][address(_token1)]
+        ];
+
+        uint256[2] memory accountRewards = estimateRewardsAmount(msg.sender);
+
+        return AccountData(accountShares, accountDeposits, accountRewards);
+    }
+
+    // Internal utils
 
     function deleteParticipant(address account) private {
         for (uint256 i = 0; i < _participantAddresses.length; i++) {
@@ -220,21 +249,9 @@ contract KPool is Ownable {
         participants[account] = Participant(account, true);
     }
 
-    function getPoolTokenBalance(address tokenAddress) public view returns (uint256) {
-        KERC20 token = KERC20(tokenAddress);
+    function getPoolTokenBalance(address tokenAddress) private view returns (uint256) {
+        IKRC20 token = IKRC20(tokenAddress);
 
         return token.balanceOf(address(this)) - _totalRewards[tokenAddress];
-    }
-
-    function token0() external view returns (address) {
-        return address(_token0);
-    }
-
-    function token1() external view returns (address) {
-        return address(_token1);
-    }
-
-    function fee() external view returns (uint256) {
-        return feePercent;
     }
 }
