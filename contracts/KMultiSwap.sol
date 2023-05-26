@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import "contracts/KPool/KPool.sol";
+import "contracts/KPool/IKPool.sol";
 import "contracts/KRC20/IKRC20.sol";
 
 contract KMultiSwap {
@@ -49,7 +49,7 @@ contract KMultiSwap {
         for (uint256 i = 0; i < steps.length; i++) {
             RouteStep memory stepData = steps[i];
 
-            KPool pool = KPool(stepData.pool);
+            IKPool pool = IKPool(stepData.pool);
 
             prevReceiveAmount = pool.estimateExchangeAmount(stepData.spendToken, prevReceiveAmount);
 
