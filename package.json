@@ -1,0 +1,8 @@
+{
+  "name": "@kw-dex/smart-contracts",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^3.0.0",
+    "dotenv": "^16.3.1",
+    "hardhat": "^2.16.1"
+  }
+}

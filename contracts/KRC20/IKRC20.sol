@@ -22,8 +22,6 @@ interface IERC20 {
 }
 
 interface IKRC20 is IERC20, IOwnable {
-    function approveUnlimited(address spender) external;
-
     function mint(uint256 amount) external;
 
     function burn(uint256 amount) external;
@@ -34,9 +32,9 @@ interface IKRC20 is IERC20, IOwnable {
 
     function decimals() external view returns (uint256);
 
-    function revokeApproval(address spender) external;
+    function decreaseAllowance(address spender, uint256 amount) external;
 
-    function transferCallData(address to, uint256 tokens, bytes[] calldata data) external;
+    function transferData(address to, uint256 tokens, bytes[] calldata data) external;
 
     event Mint(uint256 amount);
 

@@ -6,7 +6,7 @@ import "contracts/KRC20/IKRC20.sol";
 import "contracts/KRC20/KRC20.sol";
 
 contract KTokenFactory is Ownable {
-    address[] _deployedTokens;
+    address[] internal _deployedTokens;
 
     event TokenDeployed(address indexed tokenOwner, address indexed tokenAddress);
 

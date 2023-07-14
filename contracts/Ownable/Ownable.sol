@@ -4,7 +4,7 @@ pragma solidity ^0.8.18;
 import "contracts/Ownable/IOwnable.sol";
 
 contract Ownable is IOwnable {
-    address _owner;
+    address internal _owner;
 
     event TransferOwnership(address indexed from, address indexed to);
 

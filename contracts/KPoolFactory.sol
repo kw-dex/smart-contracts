@@ -17,24 +17,34 @@ contract KPoolFactory is Ownable {
 
     address[] verifiedPools;
 
+    address _wrapperAddress;
+
     event PoolDeployed(address indexed poolAddress, address indexed owner);
 
-    constructor() {
+    constructor(address wrapperAddress) {
         _owner = msg.sender;
+        _wrapperAddress = wrapperAddress;
     }
 
-    function deployPool(address _token0Address, address _token1Address, uint8 _feePercent) external returns (address) {
-        DeployedPoolData memory existingPool = this.resolvePoolAddress(_token0Address, _token1Address);
+    function deployPool(
+        address _token0Address,
+        address _token1Address,
+        uint16 _feePercent
+    ) external returns (address) {
+        DeployedPoolData memory existingPool = this.getPool(_token0Address, _token1Address, _feePercent);
 
         if (existingPool.deployed) return existingPool.poolAddress;
 
-        IKPool pool = new KPool(_token0Address, _token1Address, msg.sender, _feePercent);
+        IKPool pool = new KPool(_token0Address, _token1Address, msg.sender, _wrapperAddress, _feePercent);
 
         if (msg.sender == _owner) verifiedPools.push(address(pool));
 
-        _deployedPools[keccak256(abi.encodePacked(_token0Address, _token1Address))] = DeployedPoolData(
-            _token0Address,
-            _token1Address,
+        address _rightToken0Address = _token0Address > _token1Address ? _token0Address : _token1Address;
+        address _rightToken1Address = _token0Address > _token1Address ? _token1Address : _token0Address;
+
+        _deployedPools[keccak256(abi.encodePacked(_token0Address, _token1Address, _feePercent))] = DeployedPoolData(
+            _rightToken0Address,
+            _rightToken1Address,
             address(pool),
             true
         );
@@ -43,9 +53,9 @@ contract KPoolFactory is Ownable {
         return address(pool);
     }
 
-    function resolvePoolAddress(address _token0, address _token1) external view returns (DeployedPoolData memory) {
-        bytes32 poolKey = keccak256(abi.encodePacked(_token0, _token1));
-        bytes32 reversePoolKey = keccak256(abi.encodePacked(_token1, _token0));
+    function getPool(address _token0, address _token1, uint16 _feePercent) external view returns (DeployedPoolData memory) {
+        bytes32 poolKey = keccak256(abi.encodePacked(_token0, _token1, _feePercent));
+        bytes32 reversePoolKey = keccak256(abi.encodePacked(_token1, _token0, _feePercent));
 
         if (_deployedPools[poolKey].deployed) return _deployedPools[poolKey];
 

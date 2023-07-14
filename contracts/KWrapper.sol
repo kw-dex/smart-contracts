@@ -5,7 +5,7 @@ import "contracts/Ownable/Ownable.sol";
 import "contracts/KRC20/IKRC20.sol";
 
 contract KWrapper is Ownable {
-    IKRC20 _wrappedToken;
+    IKRC20 internal _wrappedToken;
 
     event Wrap(address indexed sender, uint256 amount);
 

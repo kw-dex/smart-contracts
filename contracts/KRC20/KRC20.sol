@@ -5,98 +5,92 @@ import "contracts/KRC20/IKRC20.sol";
 import "contracts/Ownable/Ownable.sol";
 
 contract KRC20 is IKRC20, Ownable {
-    string _symbol;
-    string _name;
-    uint16 _decimals;
+    string internal _symbol;
+    string internal _name;
+    uint16 internal _decimals;
 
-    uint256 _totalSupply;
+    uint256 internal _totalSupply;
 
-    mapping (address => uint256) balances;
+    mapping (address => uint256) internal _balances;
 
-    mapping (address => mapping(address => uint256)) _allowance;
-    mapping (address => mapping(address => bool)) _unlimitedAllowance;
+    mapping (address => mapping(address => uint256)) internal _allowance;
 
     modifier requireBalance(uint256 balance) {
-        require(balances[msg.sender] >= balance, "Not enough balance");
-
+        require(_balances[msg.sender] >= balance, "Not enough balance");
         _;
     }
 
     constructor(
-        string memory _tokenSymbol,
-        string memory _tokenName,
-        uint16 _tokenDecimals,
-        address _tokenOwner
+        string memory tokenSymbol,
+        string memory tokenName,
+        uint16 tokenDecimals,
+        address owner
     ) {
-        require(_tokenDecimals >= 0 && _tokenDecimals <= 18, "Invalid token decimals");
-        _symbol = _tokenSymbol;
-        _name = _tokenName;
-        _decimals = _tokenDecimals;
-        _owner = _tokenOwner;
+        require(tokenDecimals >= 0 && tokenDecimals <= 18, "Invalid token decimals");
+        _symbol = tokenSymbol;
+        _name = tokenName;
+        _decimals = tokenDecimals;
+        _owner = owner;
     }
 
     function totalSupply() external view returns(uint256) {
-        return _totalSupply - balances[address(0)];
+        return _totalSupply - _balances[address(0)];
     }
 
     function balanceOf(address tokenOwner) external view returns (uint256) {
-        return balances[tokenOwner];
+        return _balances[tokenOwner];
     }
 
-    function allowance(address tokenOwner, address spender) external view returns (uint256 remaining) {
-        if (_unlimitedAllowance[tokenOwner][spender]) return 2**256 - 1;
-
+    function allowance(address tokenOwner, address spender) external view returns (uint256) {
         return _allowance[tokenOwner][spender];
     }
 
     function transfer(address to, uint256 tokens) external requireBalance(tokens) {
-        balances[msg.sender] = balances[msg.sender] - tokens;
-        balances[to] = balances[to] + tokens;
+        _balances[msg.sender] = _balances[msg.sender] - tokens;
+        _balances[to] = _balances[to] + tokens;
 
         emit Transfer(msg.sender, to, tokens);
     }
 
-    function approve(address spender, uint256 tokens) external {
-        _allowance[msg.sender][spender] += tokens;
-    }
-
-    function approveUnlimited(address spender) external {
-        _unlimitedAllowance[msg.sender][spender] = true;
+    function approve(address spender, uint256 amount) external {
+        if (amount == type(uint256).max) _allowance[msg.sender][spender] = type(uint256).max;
+        else _allowance[msg.sender][spender] += amount;
     }
 
     function transferFrom(address from, address to, uint256 tokens) external {
         require(checkAllowance(tokens, from, to), "Not enough allowance");
-        require(balances[from] >= tokens, "Not enough balance");
+        require(_balances[from] >= tokens, "Not enough balance");
 
-        _allowance[from][to] = _allowance[from][to] - tokens;
-        balances[from] = balances[from] - tokens;
-        balances[to] = balances[to] + tokens;
+        if (_allowance[from][to] < type(uint256).max) _allowance[from][to] = _allowance[from][to] - tokens;
+
+        _balances[from] = _balances[from] - tokens;
+        _balances[to] = _balances[to] + tokens;
 
         emit Transfer(from, to, tokens);
     }
 
     function mint(uint256 amount) external onlyOwner {
-        balances[msg.sender] = balances[msg.sender] + amount;
+        _balances[msg.sender] = _balances[msg.sender] + amount;
         _totalSupply = _totalSupply + amount;
 
         emit Mint(amount);
     }
 
     function burn(uint256 amount) external requireBalance(amount) {
-        balances[msg.sender] = balances[msg.sender] - amount;
-        balances[address(0)] = balances[address(0)] + amount;
+        _balances[msg.sender] -= amount;
+        _totalSupply -= amount;
 
         emit Burn(msg.sender, amount);
     }
 
-    function revokeApproval(address spender) external {
-        _allowance[msg.sender][spender] = 0;
-        _unlimitedAllowance[msg.sender][spender] = false;
+    function decreaseAllowance(address spender, uint256 amount) external {
+        if (amount > _allowance[msg.sender][spender]) _allowance[msg.sender][spender] = 0;
+        else _allowance[msg.sender][spender] -= amount;
     }
 
-    function transferCallData(address to, uint256 tokens, bytes[] calldata callData) external requireBalance(tokens) {
-        balances[msg.sender] = balances[msg.sender] - tokens;
-        balances[to] = balances[to] + tokens;
+    function transferData(address to, uint256 tokens, bytes[] calldata callData) external requireBalance(tokens) {
+        _balances[msg.sender] -= tokens;
+        _balances[to] += tokens;
 
         emit Transfer(msg.sender, to, tokens);
 
@@ -110,8 +104,6 @@ contract KRC20 is IKRC20, Ownable {
     }
 
     function checkAllowance(uint256 amount, address tokenOwner, address spender) private view returns (bool) {
-        if (_unlimitedAllowance[tokenOwner][spender]) return true;
-
         return _allowance[tokenOwner][spender] >= amount;
     }
 
