@@ -10,6 +10,7 @@ contract KPoolFactory is Ownable {
         address token0;
         address token1;
         address poolAddress;
+        uint256 fee;
         bool deployed;
     }
 
@@ -45,6 +46,7 @@ contract KPoolFactory is Ownable {
             _rightToken0Address,
             _rightToken1Address,
             address(pool),
+            _feePercent,
             true
         );
 
@@ -62,7 +64,7 @@ contract KPoolFactory is Ownable {
 
         if (_deployedPools[reversePoolKey].deployed) return _deployedPools[reversePoolKey];
 
-        return DeployedPoolData(_token0, _token1, address(0), false);
+        return DeployedPoolData(_token0, _token1, address(0), _feePercent, false);
     }
 
     function getDeployedPools() public view returns (DeployedPoolData[] memory) {
