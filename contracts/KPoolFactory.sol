@@ -13,11 +13,10 @@ contract KPoolFactory is Ownable {
         bool deployed;
     }
 
-    mapping (bytes32 => DeployedPoolData) _deployedPools;
+    mapping (bytes32 => DeployedPoolData) private _deployedPools;
+    bytes32[] private _deployedPoolKeys;
 
-    address[] verifiedPools;
-
-    address _wrapperAddress;
+    address private _wrapperAddress;
 
     event PoolDeployed(address indexed poolAddress, address indexed owner);
 
@@ -37,17 +36,19 @@ contract KPoolFactory is Ownable {
 
         IKPool pool = new KPool(_token0Address, _token1Address, msg.sender, _wrapperAddress, _feePercent);
 
-        if (msg.sender == _owner) verifiedPools.push(address(pool));
-
         address _rightToken0Address = _token0Address > _token1Address ? _token0Address : _token1Address;
         address _rightToken1Address = _token0Address > _token1Address ? _token1Address : _token0Address;
 
-        _deployedPools[keccak256(abi.encodePacked(_token0Address, _token1Address, _feePercent))] = DeployedPoolData(
+        bytes32 poolKey = keccak256(abi.encodePacked(_token0Address, _token1Address, _feePercent));
+
+        _deployedPools[poolKey] = DeployedPoolData(
             _rightToken0Address,
             _rightToken1Address,
             address(pool),
             true
         );
+
+        _deployedPoolKeys.push(poolKey);
 
         emit PoolDeployed(address(pool), msg.sender);
         return address(pool);
@@ -64,9 +65,13 @@ contract KPoolFactory is Ownable {
         return DeployedPoolData(_token0, _token1, address(0), false);
     }
 
-    function verifyPool(address poolAddress) external {
-        require(msg.sender == _owner, "Not an owner");
+    function getDeployedPools() public view returns (DeployedPoolData[] memory) {
+        DeployedPoolData[] memory pools = new DeployedPoolData[](_deployedPoolKeys.length);
 
-        verifiedPools.push(poolAddress);
+        for (uint i = 0; i < _deployedPoolKeys.length; i++) {
+            pools[i] = _deployedPools[_deployedPoolKeys[i]];
+        }
+
+        return pools;
     }
 }
