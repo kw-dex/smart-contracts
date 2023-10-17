@@ -30,24 +30,24 @@ contract KPool is IKPool, Ownable {
 
     address[] internal _participantAddresses;
 
-    uint16 internal _feePercent;
+    uint256 internal _feePercent;
 
     uint256 public sharesDenominator = 1e10;
 
-    uint256 public feeDenominator = 1e5;
+    uint256 public feeDenominator = 1e7;
 
     constructor (
         address token0Address,
         address token1Address,
         address poolOwner,
         address wrapperAddress,
-        uint16 feePercent
+        uint256 feePercent
     ) {
         _token0 = IKRC20(token0Address);
         _token1 = IKRC20(token1Address);
         _owner = poolOwner;
         _wrapper = KWrapper(wrapperAddress);
-        feePercent = _feePercent;
+        _feePercent = feePercent;
     }
 
     // Deposit
@@ -129,8 +129,8 @@ contract KPool is IKPool, Ownable {
         uint256 balance0 = getPoolTokenBalance(address(_token0));
         uint256 balance1 = getPoolTokenBalance(address(_token1));
 
-        uint256 amount0 = (((balance0 * shares[0]) / sharesDenominator) * withdrawPercent) / 1e2;
-        uint256 amount1 = (((balance1 * shares[1]) / sharesDenominator) * withdrawPercent) / 1e2;
+        uint256 amount0 = (((balance0 * shares[0]) / sharesDenominator) * withdrawPercent) / 1e4;
+        uint256 amount1 = (((balance1 * shares[1]) / sharesDenominator) * withdrawPercent) / 1e4;
 
         return [amount0, amount1];
     }
@@ -212,7 +212,7 @@ contract KPool is IKPool, Ownable {
         emit ClaimRewards(msg.sender, rewardsAmount[0], rewardsAmount[1]);
     }
 
-    function estimateRewardsAmount(address account) private view returns (uint256[2] memory) {
+    function estimateRewardsAmount(address account) public view returns (uint256[2] memory) {
         return [_rewards[account][address(_token0)], _rewards[account][address(_token1)]];
     }
 
@@ -256,8 +256,8 @@ contract KPool is IKPool, Ownable {
     function getAccountData() external view returns (AccountData memory) {
         uint256[2] memory accountShares = estimateAccountShare(msg.sender);
         uint256[2] memory accountDeposits = [
-            _deposits[msg.sender][address(_token0)],
-            _deposits[msg.sender][address(_token1)]
+        _deposits[msg.sender][address(_token0)],
+        _deposits[msg.sender][address(_token1)]
         ];
 
         uint256[2] memory accountRewards = estimateRewardsAmount(msg.sender);

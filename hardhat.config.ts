@@ -4,17 +4,18 @@ import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.18",
+  solidity: "0.8.20",
   networks: {
     localhost: {
       url: "http://127.0.0.1:8545",
     },
     testnet: {
-      url: "https://data-seed-prebsc-1-s1.binance.org:8545",
+      url: "https://bsc-testnet.publicnode.com",
       from: process.env.BNB_TESTNET_ACCOUNT,
       accounts: {
-        mnemonic: process.env.BNB_TESTNET_MNEMONIC
-      }
+        mnemonic: process.env.BNB_TESTNET_MNEMONIC as string
+      },
+      gasPrice: 1200000000
     }
   },
   etherscan: {

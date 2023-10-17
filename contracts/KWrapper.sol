@@ -14,7 +14,7 @@ contract KWrapper is Ownable {
     }
 
     function wrap() external payable {
-        require(msg.value > 0, "Invalid wrap amount");
+        require(msg.value > 0);
 
         _wrappedToken.mint(msg.value);
         _wrappedToken.transfer(msg.sender, msg.value);
@@ -23,7 +23,7 @@ contract KWrapper is Ownable {
     }
 
     function unwrap(uint256 amount) external {
-        require(amount > 0, "Invalid unwrap amount");
+        require(amount > 0);
 
         _wrappedToken.transferFrom(msg.sender, address(this), amount);
         _wrappedToken.burn(amount);

@@ -1,5 +1,3 @@
-artifacts
-.deps
 node_modules
 .env
 coverage
@@ -9,4 +7,6 @@ typechain-types
 
 # Hardhat files
 cache
+artifacts
 
+.idea

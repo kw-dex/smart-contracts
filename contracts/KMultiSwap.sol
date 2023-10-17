@@ -3,9 +3,14 @@ pragma solidity ^0.8.18;
 
 import "contracts/KPool/IKPool.sol";
 import "contracts/KRC20/IKRC20.sol";
+import "./KWrapper.sol";
 
 contract KMultiSwap {
-    constructor() {}
+    address private _wrapperAddress;
+
+    constructor(address wrapperAddress) {
+        _wrapperAddress = wrapperAddress;
+    }
 
     struct RouteStep {
         address spendToken;
@@ -68,10 +73,17 @@ contract KMultiSwap {
         else return lastPool.token0();
     }
 
-    function multiSwap(uint256 amount, RouteStep[] memory steps) external {
-        IKRC20 initialSpendToken = IKRC20(steps[0].spendToken);
+    function multiSwap(uint256 amount, RouteStep[] memory steps) external payable {
+        KWrapper wrapper = KWrapper(_wrapperAddress);
 
-        initialSpendToken.transferFrom(msg.sender, address(this), amount);
+        if (msg.value > 0) {
+            wrapper.wrap{ value: msg.value }();
+        }
+
+        if (steps[0].spendToken != wrapper.token() || msg.value != amount) {
+            IKRC20 initialSpendToken = IKRC20(steps[0].spendToken);
+            initialSpendToken.transferFrom(msg.sender, address(this), amount);
+        }
 
         address receiveTokenAddress = getReceiveToken(steps);
 

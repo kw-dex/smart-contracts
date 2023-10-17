@@ -29,11 +29,11 @@ contract KPoolFactory is Ownable {
     function deployPool(
         address _token0Address,
         address _token1Address,
-        uint16 _feePercent
+        uint256 _feePercent
     ) external returns (address) {
         DeployedPoolData memory existingPool = this.getPool(_token0Address, _token1Address, _feePercent);
 
-        if (existingPool.deployed) return existingPool.poolAddress;
+        if (existingPool.deployed) revert("pool exist");
 
         IKPool pool = new KPool(_token0Address, _token1Address, msg.sender, _wrapperAddress, _feePercent);
 
@@ -53,7 +53,7 @@ contract KPoolFactory is Ownable {
         return address(pool);
     }
 
-    function getPool(address _token0, address _token1, uint16 _feePercent) external view returns (DeployedPoolData memory) {
+    function getPool(address _token0, address _token1, uint256 _feePercent) external view returns (DeployedPoolData memory) {
         bytes32 poolKey = keccak256(abi.encodePacked(_token0, _token1, _feePercent));
         bytes32 reversePoolKey = keccak256(abi.encodePacked(_token1, _token0, _feePercent));
 
