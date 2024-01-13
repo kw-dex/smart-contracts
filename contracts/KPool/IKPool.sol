@@ -11,7 +11,7 @@ interface IKPool is IKPoolEvents, IOwnable {
         uint256[2] rewards;
     }
 
-    function depositTokens(uint256 amount0, uint256 amount1) external payable;
+    function depositTokens(uint256 amount0, uint256 amount1) external;
 
     function withdrawTokens(uint8 withdrawPercent) external;
 

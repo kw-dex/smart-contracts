@@ -10,12 +10,12 @@ const config: HardhatUserConfig = {
       url: "http://127.0.0.1:8545",
     },
     testnet: {
-      url: "https://bsc-testnet.publicnode.com",
+      url: "https://data-seed-prebsc-2-s1.bnbchain.org:8545",
       from: process.env.BNB_TESTNET_ACCOUNT,
       accounts: {
         mnemonic: process.env.BNB_TESTNET_MNEMONIC as string
       },
-      gasPrice: 1200000000
+      gasPrice: 10_000_000_000
     }
   },
   etherscan: {

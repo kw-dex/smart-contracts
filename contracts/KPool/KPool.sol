@@ -52,36 +52,15 @@ contract KPool is IKPool, Ownable {
 
     // Deposit
 
-    function depositTokens(uint256 amount0, uint256 amount1) external payable {
-        if (msg.value > 0) {
-            bool isWrapped = address(_token0) == _wrapper.token() || address(_token1) == _wrapper.token();
+    function depositTokens(uint256 amount0, uint256 amount1) external {
+        _token0.transferFrom(msg.sender, address(this), amount0);
+        _token1.transferFrom(msg.sender, address(this), amount1);
 
-            if ((amount0 > 0 && amount1 > 0) || !isWrapped) {
-                payable(msg.sender).transfer(msg.value);
-            } else {
-                (bool success, ) = payable(address(_wrapper)).call{value: msg.value}("wrap");
+        _deposits[msg.sender][address(_token0)] += amount0;
+        _deposits[msg.sender][address(_token1)] += amount1;
 
-                require(success, "Deposit failed");
-            }
-        }
-
-        if (address(_token0) == _wrapper.token() && amount0 == 0 && msg.value > 0) {
-            require(amount1 > 0, "Invalid amount");
-        } else if (address(_token1) == _wrapper.token() && amount1 == 0 && msg.value > 0) {
-            require(amount0 > 0, "Invalid amount");
-        } else {
-            require(amount0 > 0 && amount1 > 0, "Invalid amounts");
-        }
-
-        if (address(_token0) != _wrapper.token()) {
-            _token0.transferFrom(msg.sender, address(this), amount0);
-            _deposits[msg.sender][address(_token0)] += amount0;
-        }
-
-        if (address(_token1) != _wrapper.token()) {
-            _token1.transferFrom(msg.sender, address(this), amount1);
-            _deposits[msg.sender][address(_token1)] += amount1;
-        }
+        _totalDeposits[address(_token0)] += amount0;
+        _totalDeposits[address(_token1)] += amount1;
 
         addParticipant(msg.sender);
 
@@ -263,6 +242,14 @@ contract KPool is IKPool, Ownable {
         uint256[2] memory accountRewards = estimateRewardsAmount(msg.sender);
 
         return AccountData(accountShares, accountDeposits, accountRewards);
+    }
+
+    function participants() external view returns (uint256) {
+        return _participantAddresses.length;
+    }
+
+    function totalDeposits() external view returns (uint256[2] memory) {
+        return [_totalDeposits[address(_token0)], _totalDeposits[address(_token1)]];
     }
 
     // Internal utils
