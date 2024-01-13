@@ -232,14 +232,14 @@ contract KPool is IKPool, Ownable {
         return false;
     }
 
-    function getAccountData() external view returns (AccountData memory) {
-        uint256[2] memory accountShares = estimateAccountShare(msg.sender);
+    function getAccountData(address owner) external view returns (AccountData memory) {
+        uint256[2] memory accountShares = estimateAccountShare(owner);
         uint256[2] memory accountDeposits = [
-        _deposits[msg.sender][address(_token0)],
-        _deposits[msg.sender][address(_token1)]
+        _deposits[owner][address(_token0)],
+        _deposits[owner][address(_token1)]
         ];
 
-        uint256[2] memory accountRewards = estimateRewardsAmount(msg.sender);
+        uint256[2] memory accountRewards = estimateRewardsAmount(owner);
 
         return AccountData(accountShares, accountDeposits, accountRewards);
     }
