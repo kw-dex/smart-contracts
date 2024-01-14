@@ -108,8 +108,8 @@ contract KPool is IKPool, Ownable {
         uint256 balance0 = getPoolTokenBalance(address(_token0));
         uint256 balance1 = getPoolTokenBalance(address(_token1));
 
-        uint256 amount0 = (((balance0 * shares[0]) / sharesDenominator) * withdrawPercent) / 1e4;
-        uint256 amount1 = (((balance1 * shares[1]) / sharesDenominator) * withdrawPercent) / 1e4;
+        uint256 amount0 = (((balance0 * shares[0]) / sharesDenominator) * withdrawPercent) / 1e2;
+        uint256 amount1 = (((balance1 * shares[1]) / sharesDenominator) * withdrawPercent) / 1e2;
 
         return [amount0, amount1];
     }
@@ -129,10 +129,18 @@ contract KPool is IKPool, Ownable {
             _token0.transferFrom(msg.sender, address(this), amount);
 
             _token1.transfer(msg.sender, tokenAmount);
+
+            _totalDeposits[address(_token0)] += amount;
+
+            _totalDeposits[address(_token1)] -= tokenAmount;
         } else {
             _token1.transferFrom(msg.sender, address(this), amount);
 
             _token0.transfer(msg.sender, tokenAmount);
+
+            _totalDeposits[address(_token0)] -= tokenAmount;
+
+            _totalDeposits[address(_token1)] += amount;
         }
 
         _totalRewards[tokenAddress] += feeAmount;

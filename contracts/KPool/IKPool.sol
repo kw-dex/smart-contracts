@@ -29,5 +29,9 @@ interface IKPool is IKPoolEvents, IOwnable {
 
     function fee() external view returns (uint256);
 
-    function getAccountData() external view returns (AccountData memory);
+    function participants() external view returns (uint256);
+
+    function totalDeposits() external view returns (uint256[2] memory);
+
+    function getAccountData(address owner) external view returns (AccountData memory);
 }
