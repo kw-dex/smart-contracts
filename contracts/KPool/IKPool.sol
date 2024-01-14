@@ -21,6 +21,10 @@ interface IKPool is IKPoolEvents, IOwnable {
 
     function estimateExchangeAmount(address tokenAddress, uint256 amount) external view returns (uint256);
 
+    function withdrawOwnerRewards() external;
+
+    function estimateOwnerRewards () external view returns (uint256[2] memory);
+
     function claimRewards () external;
 
     function token0() external view returns (address);
@@ -32,6 +36,8 @@ interface IKPool is IKPoolEvents, IOwnable {
     function participants() external view returns (uint256);
 
     function totalDeposits() external view returns (uint256[2] memory);
+
+    function poolBalances() external view returns (uint256[2] memory);
 
     function getAccountData(address owner) external view returns (AccountData memory);
 }

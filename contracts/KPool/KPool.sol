@@ -72,17 +72,11 @@ contract KPool is IKPool, Ownable {
     function withdrawTokens(uint8 withdrawPercent) external {
         uint256[2] memory amounts = estimateWithdrawAmount(withdrawPercent);
 
-        require(
-            _deposits[msg.sender][address(_token0)] >= amounts[0]
-            && _deposits[msg.sender][address(_token1)] >= amounts[1],
-            "Not enough deposit"
-        );
+        if (_deposits[msg.sender][address(_token0)] >= amounts[0]) amounts[0] = _deposits[msg.sender][address(_token0)];
+        if (_deposits[msg.sender][address(_token1)] >= amounts[1]) amounts[1] = _deposits[msg.sender][address(_token1)];
 
-        require(
-            getPoolTokenBalance(address(_token0)) >= amounts[0]
-            && getPoolTokenBalance(address(_token1)) >= amounts[1],
-            "Not enough pool balance"
-        );
+        if (getPoolTokenBalance(address(_token0)) >= amounts[0]) amounts[0] = getPoolTokenBalance(address(_token0));
+        if (getPoolTokenBalance(address(_token1)) >= amounts[1]) amounts[1] = getPoolTokenBalance(address(_token1));
 
         _totalDeposits[address(_token0)] -= amounts[0];
         _totalDeposits[address(_token1)] -= amounts[1];
@@ -117,35 +111,13 @@ contract KPool is IKPool, Ownable {
     // Exchange
 
     function exchangeToken(address tokenAddress, uint256 amount) external {
-        uint256 feeAmount = (amount * _feePercent) / 1e5;
+        uint256 feeAmount = (amount * _feePercent) / 1e7;
 
         uint256 tokenAmount = estimateExchangeAmount(tokenAddress, amount);
 
         require(tokenAmount > 0, "Invalid exchange amount");
 
         bool ltr = isLTR(tokenAddress);
-
-        if (ltr) {
-            _token0.transferFrom(msg.sender, address(this), amount);
-
-            _token1.transfer(msg.sender, tokenAmount);
-
-            _totalDeposits[address(_token0)] += amount;
-
-            _totalDeposits[address(_token1)] -= tokenAmount;
-        } else {
-            _token1.transferFrom(msg.sender, address(this), amount);
-
-            _token0.transfer(msg.sender, tokenAmount);
-
-            _totalDeposits[address(_token0)] -= tokenAmount;
-
-            _totalDeposits[address(_token1)] += amount;
-        }
-
-        _totalRewards[tokenAddress] += feeAmount;
-
-        emit Exchange(ltr ? address(_token0) : address(_token1), ltr ? address(_token1) : address(_token0), amount, tokenAmount);
 
         // Distribute fees
         for (uint256 i = 0; i < _participantAddresses.length; i++) {
@@ -159,6 +131,20 @@ contract KPool is IKPool, Ownable {
 
             _rewards[participantAddress][tokenAddress] += rewardAmount;
         }
+
+        if (ltr) {
+            _token0.transferFrom(msg.sender, address(this), amount);
+
+            _token1.transfer(msg.sender, tokenAmount);
+        } else {
+            _token1.transferFrom(msg.sender, address(this), amount);
+
+            _token0.transfer(msg.sender, tokenAmount);
+        }
+
+        _totalRewards[tokenAddress] += feeAmount;
+
+        emit Exchange(ltr ? address(_token0) : address(_token1), ltr ? address(_token1) : address(_token0), amount, tokenAmount);
     }
 
     function estimateExchangeAmount(address tokenAddress, uint256 amount) public view returns (uint256) {
@@ -173,13 +159,18 @@ contract KPool is IKPool, Ownable {
         uint256 balance0 = getPoolTokenBalance(address(_token0));
         uint256 balance1 = getPoolTokenBalance(address(_token1));
 
-        uint token1Exchange = ((amount - feeAmount) * 1e3) * (balance1 * 1e3 / balance0);
-        uint token0Exchange = ((amount - feeAmount) * 1e3) * (balance0 * 1e3 / balance1);
+        uint256 plainBalance0 = balance0 * (10 ** _token1.decimals());
+        uint256 plainBalance1 = balance1 * (10 **_token0.decimals());
+
+        uint256 decimalSum = 10 ** (_token1.decimals() + _token0.decimals());
+
+        uint token1Exchange = ((amount - feeAmount)) * (plainBalance1 * decimalSum / plainBalance0) / (10 ** _token0.decimals());
+        uint token0Exchange = ((amount - feeAmount)) * (plainBalance0 * decimalSum / plainBalance1) / (10 ** _token1.decimals());
 
         token1Exchange = token1Exchange * (1e6 - priceImpact) / 1e6;
         token0Exchange = token0Exchange * (1e6 - priceImpact) / 1e6;
 
-        return (ltr ? token1Exchange : token0Exchange) / 1e6;
+        return (ltr ? token1Exchange : token0Exchange) / (10 ** IKRC20(tokenAddress).decimals());
     }
 
     // Rewards
@@ -201,6 +192,21 @@ contract KPool is IKPool, Ownable {
 
     function estimateRewardsAmount(address account) public view returns (uint256[2] memory) {
         return [_rewards[account][address(_token0)], _rewards[account][address(_token1)]];
+    }
+
+    function estimateOwnerRewards () public view returns (uint256[2] memory) {
+        uint256 maxTransferAmount0 = getPoolTokenBalance(address(_token0)) - _totalDeposits[address(_token0)];
+        uint256 maxTransferAmount1 = getPoolTokenBalance(address(_token1)) - _totalDeposits[address(_token1)];
+
+        return [maxTransferAmount0, maxTransferAmount1];
+    }
+
+    function withdrawOwnerRewards() external onlyOwner {
+        uint256 maxTransferAmount0 = getPoolTokenBalance(address(_token0)) - _totalDeposits[address(_token0)];
+        uint256 maxTransferAmount1 = getPoolTokenBalance(address(_token1)) - _totalDeposits[address(_token1)];
+
+        _token0.transfer(msg.sender, maxTransferAmount0);
+        _token0.transfer(msg.sender, maxTransferAmount1);
     }
 
     // Private calculations
@@ -258,6 +264,10 @@ contract KPool is IKPool, Ownable {
 
     function totalDeposits() external view returns (uint256[2] memory) {
         return [_totalDeposits[address(_token0)], _totalDeposits[address(_token1)]];
+    }
+
+    function poolBalances() external view returns (uint256[2] memory) {
+        return [_token0.balanceOf(address(this)), _token1.balanceOf(address(this))];
     }
 
     // Internal utils
