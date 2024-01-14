@@ -14,7 +14,7 @@ npx hardhat run --network localhost scripts/deploy.ts
 
 - TokenFactory `0x8d671DA62F82cDA6781a0e12E1852bFdAd72a964`
 - Wrapper `0xD28ff1D935e13B9472846E274Eb77e4332257031`
-- PoolFactory `0xfB773F574e240fa3541F3596b1653D43c08bec25`
+- PoolFactory `0x6d0CD2e33a05D21CF881c1f350cc8B55d85d3474`
 - Faucet `0x68BFd38fFF62C6A80556986D8725F2f55dAf53eB`
 - MultiSwap `0x7d4E75e0B6a745c4fe8Fa072BddBDcbF4377fC2E`
 
@@ -26,4 +26,4 @@ npx hardhat run --network localhost scripts/deploy.ts
 - DAI `0x0F213F6E7B46Eaf0cedf34Fde2C0185ed976B60a`
 
 ### Deployed liquidity pools:
-- USDT-USDC 10% `0x3975184e6ca61f315eBFc91973Cf745B3A5dFf87`
+- USDT-USDC 10% `0xCEef660dc759AE1BAcb12B11592031562f0eA1Da`

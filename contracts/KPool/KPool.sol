@@ -70,7 +70,7 @@ contract KPool is IKPool, Ownable {
     // Withdraw
 
     function withdrawTokens(uint8 withdrawPercent) external {
-        uint256[2] memory amounts = estimateWithdrawAmount(withdrawPercent);
+        uint256[2] memory amounts = estimateWithdrawAmount(withdrawPercent, msg.sender);
 
         if (withdrawPercent == 100) deleteParticipant(msg.sender);
 

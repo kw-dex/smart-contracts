@@ -15,7 +15,7 @@ interface IKPool is IKPoolEvents, IOwnable {
 
     function withdrawTokens(uint8 withdrawPercent) external;
 
-    function estimateWithdrawAmount(uint8 withdrawPercent) external view returns (uint256[2] memory);
+    function estimateWithdrawAmount(uint8 withdrawPercent, address holder) external view returns (uint256[2] memory);
 
     function exchangeToken(address tokenAddress, uint256 amount) external;
 
