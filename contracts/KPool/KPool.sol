@@ -18,15 +18,15 @@ contract KPool is IKPool, Ownable {
         bool isParticipant;
     }
 
-    mapping (address => mapping(address => uint256)) internal _deposits;
+    mapping(address => mapping(address => uint256)) internal _deposits;
 
-    mapping (address => uint256) internal _totalDeposits;
+    mapping(address => uint256) internal _totalDeposits;
 
-    mapping (address => mapping(address => uint256)) internal _rewards;
+    mapping(address => mapping(address => uint256)) internal _rewards;
 
-    mapping (address => uint256) internal _totalRewards;
+    mapping(address => uint256) internal _totalRewards;
 
-    mapping (address => Participant) internal _participants;
+    mapping(address => Participant) internal _participants;
 
     address[] internal _participantAddresses;
 
@@ -72,11 +72,7 @@ contract KPool is IKPool, Ownable {
     function withdrawTokens(uint8 withdrawPercent) external {
         uint256[2] memory amounts = estimateWithdrawAmount(withdrawPercent);
 
-        if (_deposits[msg.sender][address(_token0)] >= amounts[0]) amounts[0] = _deposits[msg.sender][address(_token0)];
-        if (_deposits[msg.sender][address(_token1)] >= amounts[1]) amounts[1] = _deposits[msg.sender][address(_token1)];
-
-        if (getPoolTokenBalance(address(_token0)) >= amounts[0]) amounts[0] = getPoolTokenBalance(address(_token0));
-        if (getPoolTokenBalance(address(_token1)) >= amounts[1]) amounts[1] = getPoolTokenBalance(address(_token1));
+        if (withdrawPercent == 100) deleteParticipant(msg.sender);
 
         _totalDeposits[address(_token0)] -= amounts[0];
         _totalDeposits[address(_token1)] -= amounts[1];
@@ -94,7 +90,7 @@ contract KPool is IKPool, Ownable {
         emit Withdraw(msg.sender, amounts[0], amounts[1]);
     }
 
-    function estimateWithdrawAmount(uint8 withdrawPercent) public view returns (uint256[2] memory) {
+    function estimateWithdrawAmount(uint8 withdrawPercent, address holder) public view returns (uint256[2] memory) {
         require(withdrawPercent > 0 && withdrawPercent <= 100, "Invalid withdraw percent");
 
         uint256[2] memory shares = estimateAccountShare(msg.sender);
@@ -104,6 +100,12 @@ contract KPool is IKPool, Ownable {
 
         uint256 amount0 = (((balance0 * shares[0]) / sharesDenominator) * withdrawPercent) / 1e2;
         uint256 amount1 = (((balance1 * shares[1]) / sharesDenominator) * withdrawPercent) / 1e2;
+
+        if (amount0 > _deposits[holder][address(_token0)]) amount0 = _deposits[holder][address(_token0)];
+        if (amount1 > _deposits[holder][address(_token1)]) amount1 = _deposits[holder][address(_token1)];
+
+        if (amount0 > getPoolTokenBalance(address(_token0))) amount0 = getPoolTokenBalance(address(_token0));
+        if (amount1 > getPoolTokenBalance(address(_token1))) amount1 = getPoolTokenBalance(address(_token1));
 
         return [amount0, amount1];
     }
@@ -160,7 +162,7 @@ contract KPool is IKPool, Ownable {
         uint256 balance1 = getPoolTokenBalance(address(_token1));
 
         uint256 plainBalance0 = balance0 * (10 ** _token1.decimals());
-        uint256 plainBalance1 = balance1 * (10 **_token0.decimals());
+        uint256 plainBalance1 = balance1 * (10 ** _token0.decimals());
 
         uint256 decimalSum = 10 ** (_token1.decimals() + _token0.decimals());
 
@@ -175,7 +177,7 @@ contract KPool is IKPool, Ownable {
 
     // Rewards
 
-    function claimRewards () external {
+    function claimRewards() external {
         uint256[2] memory rewardsAmount = estimateRewardsAmount(msg.sender);
 
         _token0.transfer(msg.sender, rewardsAmount[0]);
@@ -194,7 +196,7 @@ contract KPool is IKPool, Ownable {
         return [_rewards[account][address(_token0)], _rewards[account][address(_token1)]];
     }
 
-    function estimateOwnerRewards () public view returns (uint256[2] memory) {
+    function estimateOwnerRewards() public view returns (uint256[2] memory) {
         uint256 maxTransferAmount0 = getPoolTokenBalance(address(_token0)) - _totalDeposits[address(_token0)];
         uint256 maxTransferAmount1 = getPoolTokenBalance(address(_token1)) - _totalDeposits[address(_token1)];
 
@@ -217,7 +219,7 @@ contract KPool is IKPool, Ownable {
     }
 
     function estimateAccountShare(address account) private view returns (uint256[2] memory) {
-        uint256 accountShare0 =  _totalDeposits[address(_token0)] == 0 ? 0 : (_deposits[account][address(_token0)] * sharesDenominator / _totalDeposits[address(_token0)]);
+        uint256 accountShare0 = _totalDeposits[address(_token0)] == 0 ? 0 : (_deposits[account][address(_token0)] * sharesDenominator / _totalDeposits[address(_token0)]);
         uint256 accountShare1 = _totalDeposits[address(_token1)] == 0 ? 0 : (_deposits[account][address(_token1)] * sharesDenominator / _totalDeposits[address(_token1)]);
 
         if (_deposits[account][address(_token0)] > _totalDeposits[address(_token0)]) accountShare0 = sharesDenominator;
