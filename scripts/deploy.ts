@@ -13,7 +13,7 @@ async function main() {
   const TokenFactory = await ethers.getContractFactory("KTokenFactory");
   const PoolFactory = await ethers.getContractFactory("KPoolFactory");
   const Wrapper = await ethers.getContractFactory("KWrapper");
-  const Faucet = await ethers.getContractFactory("KFaucet");
+  // const Faucet = await ethers.getContractFactory("KFaucet");
   const MultiSwap = await ethers.getContractFactory("KMultiSwap");
   const Token = await ethers.getContractFactory("KRC20");
 
@@ -127,7 +127,7 @@ async function main() {
     verificationErrors.push(multiSwapAddress)
   });
 
-  console.log("\t\t[i] 1/2 Multi swap contract verified")
+  console.log("\t\t[i] 2/2 Multi swap contract verified")
 
   // ========================================================================
   //

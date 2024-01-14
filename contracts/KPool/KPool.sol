@@ -166,13 +166,15 @@ contract KPool is IKPool, Ownable {
 
         uint256 decimalSum = 10 ** (_token1.decimals() + _token0.decimals());
 
-        uint token1Exchange = ((amount - feeAmount)) * (plainBalance1 * decimalSum / plainBalance0) / (10 ** _token0.decimals());
-        uint token0Exchange = ((amount - feeAmount)) * (plainBalance0 * decimalSum / plainBalance1) / (10 ** _token1.decimals());
+        uint tokenExchange;
 
-        token1Exchange = token1Exchange * (1e6 - priceImpact) / 1e6;
-        token0Exchange = token0Exchange * (1e6 - priceImpact) / 1e6;
+        if(ltr) {
+            tokenExchange = ((amount - feeAmount)) * (plainBalance1 * decimalSum / plainBalance0) / (10 ** _token0.decimals());
+        } else {
+            tokenExchange = ((amount - feeAmount)) * (plainBalance0 * decimalSum / plainBalance1) / (10 ** _token1.decimals());
+        }
 
-        return (ltr ? token1Exchange : token0Exchange) / (10 ** IKRC20(tokenAddress).decimals());
+        return tokenExchange * (1e6 - priceImpact) / 1e6 / (10 ** IKRC20(tokenAddress).decimals());
     }
 
     // Rewards
