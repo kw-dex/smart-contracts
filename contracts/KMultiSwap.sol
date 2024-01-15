@@ -73,7 +73,7 @@ contract KMultiSwap {
         else return lastPool.token0();
     }
 
-    function multiSwap(uint256 amount, RouteStep[] memory steps) external payable {
+    function multiSwap(uint256 amount, RouteStep[] memory steps, bool receiveNative) external payable {
         KWrapper wrapper = KWrapper(_wrapperAddress);
 
         if (msg.value > 0) {
@@ -112,7 +112,12 @@ contract KMultiSwap {
 
         uint256 receivedAmount = receivedToken.balanceOf(address(this));
 
-        receivedToken.transfer(msg.sender, receivedAmount);
+        if (receiveNative && address(receivedToken) == wrapper.token()) {
+            wrapper.unwrap(receivedAmount);
+            payable(msg.sender).transfer(receivedAmount);
+        } else {
+            receivedToken.transfer(msg.sender, receivedAmount);
+        }
 
         emit MultiSwapSuccess(steps[0].spendToken, receiveTokenAddress, amount, receivedAmount, msg.sender);
     }
