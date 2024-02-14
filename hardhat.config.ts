@@ -7,7 +7,7 @@ const config: HardhatUserConfig = {
   solidity: "0.8.20",
   networks: {
     localhost: {
-      url: "http://127.0.0.1:8545",
+      url: "http://127.0.0.1:8545"
     },
     testnet: {
       url: "https://data-seed-prebsc-2-s1.bnbchain.org:8545",
@@ -15,7 +15,7 @@ const config: HardhatUserConfig = {
       accounts: {
         mnemonic: process.env.BNB_TESTNET_MNEMONIC as string
       },
-      gasPrice: 10_000_000_000
+      gasPrice: 10000000000,
     }
   },
   etherscan: {

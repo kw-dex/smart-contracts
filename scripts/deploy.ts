@@ -30,6 +30,7 @@ async function main() {
 
   console.log("\t\t[i] 1/2 Token factory deployed:", tokenFactoryAddress)
 
+  await new Promise(r => setTimeout(r, 5000))
   await run("verify:verify", {
     address: tokenFactoryAddress,
     constructorArguments: [],
@@ -49,6 +50,7 @@ async function main() {
 
   console.log("\t\t[i] 1/2 twBNB token deployed:", wrappedAddress)
 
+  await new Promise(r => setTimeout(r, 5000))
   await run("verify:verify", {
     address: wrappedAddress,
     constructorArguments: ["twBNB", "Wrapped BNB", 18, ownerAddress],
@@ -66,6 +68,7 @@ async function main() {
 
   console.log("\t\t[i] 1/3 Token wrapper deployed at:", wrapperAddress)
 
+  await new Promise(r => setTimeout(r, 5000))
   await run("verify:verify", {
     address: wrapperAddress,
     constructorArguments: [wrappedAddress],
@@ -84,16 +87,17 @@ async function main() {
   // Deploy pool factory
 
   console.log("\t- Deploying pool factory...")
-  const poolFactory = (await PoolFactory.connect(owner).deploy(wrapperAddress))
+  const poolFactory = (await PoolFactory.connect(owner).deploy())
 
   await poolFactory.waitForDeployment()
   const poolFactoryAddress = await poolFactory.getAddress();
 
   console.log("\t\t[i] 1/2 Pool factory deployed at:", poolFactoryAddress)
 
+  await new Promise(r => setTimeout(r, 5000))
   await run("verify:verify", {
     address: poolFactoryAddress,
-    constructorArguments: [wrapperAddress],
+    constructorArguments: [],
   }).catch(() => {
     verificationErrors.push(poolFactoryAddress)
   });
@@ -120,6 +124,7 @@ async function main() {
 
   console.log("\t\t[i] 1/2 Multi swap deployed at:", multiSwapAddress)
 
+  await new Promise(r => setTimeout(r, 5000))
   await run("verify:verify", {
     address: multiSwapAddress,
     constructorArguments: [wrapperAddress],
@@ -169,8 +174,8 @@ async function main() {
     await (await tokenFactory.deployToken("tDAI", "Dai StableCoin", 18)).wait();
     await (await tokenFactory.deployToken("twETH", "Wrapped Ether", 18)).wait();
     await (await tokenFactory.deployToken("ALICE", "My Neighbor Alice", 6)).wait();
-    await (await tokenFactory.deployToken("ANIMA", "Anima Token", 18)).wait();
-    await (await tokenFactory.deployToken("KWNET", "KW Network Token", 18)).wait();
+    await (await tokenFactory.deployToken("ANIMA", "Anima Token", 12)).wait();
+    await (await tokenFactory.deployToken("KWNET", "KW Network Token", 6)).wait();
 
     console.log("\t\t[i] Tokens deployed (7)");
 
@@ -185,13 +190,25 @@ async function main() {
     ] = (await tokenFactory.deployedTokens()).slice(1);
 
     // Deploy pools
-    await (await poolFactory.deployPool(USDT, USDC, 0.1 * 1e5)).wait()
+    await (await poolFactory.deployPool(USDT, USDC, 0.05 * 1e2)).wait()
 
     // await (await poolFactory.deployPool(wETH, USDT, 10 * 1e5)).wait()
     // await (await poolFactory.deployPool(wETH, DAI, 10 * 1e5)).wait()
     // await (await poolFactory.deployPool(wETH, USDC, 10 * 1e5)).wait();
 
-    const USDT_USDC = await poolFactory.getPool(USDT, USDC, 0.1 * 1e5);
+    const _token0 = Number(USDT) > Number(USDC) ? USDC : USDT
+    const _token1 = Number(USDT) > Number(USDC) ? USDT : USDC
+
+    const USDT_USDC = await poolFactory.getPool(_token0, _token1, 0.05 * 1e2);
+
+    await run("verify:verify", {
+      address: USDT_USDC,
+      constructorArguments: [
+        _token0,
+        _token1,
+        0.05 * 1e2
+      ],
+    }).catch(console.log);
 
     console.log("\t\t[i] Pools deployed (1)");
     // const wETH_USDT = await poolFactory.getPool(wETH, USDT, 10 * 1e5);

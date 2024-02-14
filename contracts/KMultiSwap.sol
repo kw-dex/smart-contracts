@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-import "contracts/KPool/IKPool.sol";
+import "contracts/KPool.sol";
 import "contracts/KRC20/IKRC20.sol";
 import "./KWrapper.sol";
 
@@ -33,13 +33,15 @@ contract KMultiSwap {
         bytes reason
     );
 
+    receive() external payable {}
+
     function estimateSwapFees(RouteStep[] memory steps) external view returns (uint256) {
         uint256 totalFee;
 
         for (uint256 i = 0; i < steps.length; i++) {
             RouteStep memory stepData = steps[i];
 
-            IKPool pool = IKPool(stepData.pool);
+            KPool pool = KPool(stepData.pool);
             totalFee += pool.fee();
         }
 
@@ -54,9 +56,9 @@ contract KMultiSwap {
         for (uint256 i = 0; i < steps.length; i++) {
             RouteStep memory stepData = steps[i];
 
-            IKPool pool = IKPool(stepData.pool);
+            KPool pool = KPool(stepData.pool);
 
-            prevReceiveAmount = pool.estimateExchangeAmount(stepData.spendToken, prevReceiveAmount);
+            prevReceiveAmount = pool.estimateSwapAmount(stepData.spendToken, prevReceiveAmount);
 
             receiveAmount += prevReceiveAmount;
         }
@@ -67,10 +69,10 @@ contract KMultiSwap {
     function getReceiveToken(RouteStep[] memory steps) private view returns (address) {
         RouteStep memory lastStep = steps[steps.length - 1];
 
-        IKPool lastPool = IKPool(lastStep.pool);
+        KPool lastPool = KPool(lastStep.pool);
 
-        if (lastPool.token0() == lastStep.spendToken) return lastPool.token1();
-        else return lastPool.token0();
+        if (lastPool.tokenA() == lastStep.spendToken) return lastPool.tokenB();
+        else return lastPool.tokenA();
     }
 
     function multiSwap(uint256 amount, RouteStep[] memory steps, bool receiveNative) external payable {
@@ -90,12 +92,12 @@ contract KMultiSwap {
         for (uint256 i = 0; i < steps.length; i++) {
             RouteStep memory stepData = steps[i];
 
-            IKPool pool = IKPool(stepData.pool);
+            KPool pool = KPool(stepData.pool);
             IKRC20 spendToken = IKRC20(stepData.spendToken);
 
             spendToken.approve(stepData.pool, spendToken.balanceOf(address(this)));
 
-            try pool.exchangeToken(stepData.spendToken, spendToken.balanceOf(address(this))) {
+            try pool.swap(stepData.spendToken, spendToken.balanceOf(address(this))) {
                 continue;
             } catch (bytes memory reason) {
                 revert MultiSwapError(
@@ -113,6 +115,7 @@ contract KMultiSwap {
         uint256 receivedAmount = receivedToken.balanceOf(address(this));
 
         if (receiveNative && address(receivedToken) == wrapper.token()) {
+            receivedToken.approve(address(wrapper), receivedAmount);
             wrapper.unwrap(receivedAmount);
             payable(msg.sender).transfer(receivedAmount);
         } else {
